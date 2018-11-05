@@ -81,7 +81,7 @@ uint8_t temprature_sens_read();
 // first. When copying an EUI from ttnctl output, this means to reverse
 // the bytes. For TTN issued EUIs the last bytes should be 0xD5, 0xB3,
 // 0x70.
-static const u1_t PROGMEM APPEUI[8]= { };
+static const u1_t PROGMEM APPEUI[8]= {  };
 void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8);}
 
 // This should also be in little endian format, see above.
@@ -210,9 +210,11 @@ void do_send(osjob_t* j) {
       Serial.print((temprature_sens_read() - 32) / 1.8);
       Serial.println(" C");
       temp = (float)((temprature_sens_read() - 32) / 1.8);
+      
       txBuffer[9] = highByte(round(VBAT*100));
       txBuffer[10] = lowByte(round(VBAT*100));
-      txBuffer[11] = round(temp*100);
+      txBuffer[11] = highByte(round(temp*10));
+      txBuffer[12] = lowByte(round(temp*10));
       
 
       
