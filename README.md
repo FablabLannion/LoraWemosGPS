@@ -18,3 +18,8 @@ Pour le TTGO LoRa32 v1 :
 
 * copier le fichier `keys.h.template` en `keys.h` et remplacer les valeurs
 * éditer le fichier `hw.h` pour définir les bonnes constantes en fonction de la carte utilisée
+
+# Boîtier
+
+* TTGO T-Beam : fichiers `boitierwemosgps.*`
+* TTGO LoRa32 v1 : fichiers `TTGO_LoRa*.stl` version modifiée de [TTGo_LoRa case](https://www.thingiverse.com/thing:3206880) sous CC:BY
