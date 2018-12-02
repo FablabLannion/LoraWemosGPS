@@ -1,9 +1,9 @@
 # LoraWemosGPS
 
-Contient du code lié à 
+Contient du code pour les cartes TTGO T-Beam ou TTGO LoRa32 v1 lié à :
 * https://wiki.fablab-lannion.org/index.php?title=WemosTTGO_GPS
 * https://wiki.fablab-lannion.org/index.php?title=WemosTTGO#Ajout_GPS
-pour les cartes TTGO T-Beam ou TTGO LoRa32 v1
+
 
 # Installation
 
