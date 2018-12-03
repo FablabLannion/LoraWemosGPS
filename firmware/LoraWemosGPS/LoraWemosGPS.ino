@@ -26,79 +26,59 @@
  * DevEUI and AppKey.
  *
  *
- *
- * function Decoder(bytes, port) {
-    var decoded = {};
-
-    decoded.latitude = ((bytes[0]<<16)>>>0) + ((bytes[1]<<8)>>>0) + bytes[2];
-    decoded.latitude = (decoded.latitude / 16777215.0 * 180) - 90;
-
-    decoded.longitude = ((bytes[3]<<16)>>>0) + ((bytes[4]<<8)>>>0) + bytes[5];
-    decoded.longitude = (decoded.longitude / 16777215.0 * 360) - 180;
-
-    var altValue = ((bytes[6]<<8)>>>0) + bytes[7];
-    var sign = bytes[6] & (1 << 7);
-    if(sign)
-    {
-        decoded.altitude = 0xFFFF0000 | altValue;
-    }
-    else
-    {
-        decoded.altitude = altValue;
-    }
-
-    decoded.hdop = bytes[8] / 10.0;
-    decoded.temp = bytes[11]
-
-    return decoded;
-}
+ *It seems that internal température is not available anymore :
+ *https://www.esp32.com/viewtopic.php?t=5875
+ * 
  *
  *******************************************************************************/
-
-#include "hw.h"
 
 #include <lmic.h>
 #include <hal/hal.h>
 #include <SPI.h>
-#include "gps.h"
 #include <WiFi.h>
+#include "gps.h"
+#include "hw.h"
 #include "keys.h"
 
 #ifdef OLED
 #include <U8x8lib.h>
-#endif 
-
-// T-Beam specific hardware
-#define BUILTIN_LED 25
-
-#ifdef OLED
 // the OLED used
 // pins defined in TTGO variant, pins_arduino.h
 U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ OLED_SCL, /* data=*/ OLED_SDA, /* reset=*/ OLED_RST);
 #endif
 
-const uint8_t vbatPin = 35;
-float VBAT; // battery voltage from ESP32 ADC read
-float temp; //internal temp of esp32
+// T-Beam specific hardware
+#define BUILTIN_LED 25
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-uint8_t temprature_sens_read();
+extern uint8_t temprature_sens_read();
 #ifdef __cplusplus
 }
 #endif
-uint8_t temprature_sens_read();
 
-
+const uint8_t vbatPin = 35;
+float VBAT; // battery voltage from ESP32 ADC read
+float temp_celsius;; //internal temp of esp32
+uint8_t temp_farenheit;
+int hall_value=0;
 char s[32]; // used to sprintf for Serial output
-uint8_t txBuffer[13]; //buffer used to send data
+uint8_t txBuffer[17]; //buffer used to send data
 gps gps;
 static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
 // cycle limitations).
 const unsigned TX_INTERVAL = 60;
+
+// Pin mapping
+const lmic_pinmap lmic_pins = {
+  .nss = 18,
+  .rxtx = LMIC_UNUSED_PIN,
+  .rst = LMIC_UNUSED_PIN, // was "14,"
+  .dio = {26, 33, 32},
+};
 
 typedef struct state {
 	uint16_t total_snd = 0; /**< total packets send */
@@ -155,14 +135,6 @@ void displayStats (state_t* st) {
 	Serial.println (l);
 
 }
-// Pin mapping
-const lmic_pinmap lmic_pins = {
-  .nss = 18,
-  .rxtx = LMIC_UNUSED_PIN,
-  .rst = LMIC_UNUSED_PIN, // was "14,"
-  .dio = {26, 33, 32},
-};
-
 
 void onEvent (ev_t ev) {
   switch (ev) {
@@ -262,17 +234,26 @@ void do_send(osjob_t* j) {
       */
       Serial.println("Vbat = "); Serial.print(VBAT); Serial.println(" Volts");
       Serial.print("Temperature: ");
+      temp_farenheit = temprature_sens_read();
       // Convert raw temperature in F to Celsius degrees
-      Serial.print((temprature_sens_read() - 32) / 1.8);
+      temp_celsius = ( temp_farenheit - 32 ) / 1.8;      
+      Serial.print(temp_celsius);
       Serial.println(" C");
-      temp = (float)((temprature_sens_read() - 32) / 1.8);
+     
+
+      
+      hall_value = hallRead(); 
+      Serial.print("Hall sensor measurement: ");
+      Serial.println(hall_value); 
 
       txBuffer[9] = highByte(round(VBAT*100));
       txBuffer[10] = lowByte(round(VBAT*100));
-      txBuffer[11] = highByte(round(temp*10));
-      txBuffer[12] = lowByte(round(temp*10));
-
-
+      txBuffer[11] = highByte(round(temp_celsius*10));
+      txBuffer[12] = lowByte(round(temp_celsius*10));
+      txBuffer[13] = highByte(curState.gps);
+      txBuffer[14] = lowByte(curState.gps);
+      txBuffer[15] = highByte(hall_value);
+      txBuffer[16] = lowByte(hall_value);   
 
       LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
       Serial.println(F("Packet queued"));
