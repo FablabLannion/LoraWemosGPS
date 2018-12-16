@@ -1,0 +1,105 @@
+{
+  "sense": [
+    {
+      "asset": "location",
+      "value": {
+        "latitude": {
+          "byte": 0,
+          "bytelength": 3,
+          "signed": false,
+          "type": "integer",
+          "calculation": "(val/16777215*180)-90"
+        },
+        "longitude": {
+          "byte": 3,
+          "bytelength": 3,
+          "signed": false,
+          "type": "integer",
+          "calculation": "(val/16777215*360)-180"
+        }
+      }
+    },
+    {
+      "asset": "altitude",
+      "value": {
+        "byte": 6,
+        "bytelength": 2,
+        "type": "integer"
+      }
+    },
+    {
+      "asset": "hdop",
+      "value": {
+        "byte": 8,
+        "bytelength": 1,
+        "type": "integer",
+        "calculation": "val/10"
+      }
+    },
+    {
+      "asset": "battery",
+      "value": {
+        "byte": 9,
+        "bytelength": 2,
+        "type": "integer",
+        "calculation": "val/100"
+      }
+    },
+    {
+      "asset": "temp",
+      "value": {
+        "byte": 11,
+        "bytelength": 2,
+        "type": "integer",
+        "calculation": "val/10"
+      }
+    },
+    {
+      "asset": "nb_gps",
+      "value": {
+        "byte": 13,
+        "bytelength": 2,
+        "type": "integer"
+      }
+    },
+    {
+      "asset": "hall",
+      "value": {
+        "byte": 15,
+        "bytelength": 2,
+        "type": "integer"
+      }
+    },
+    {
+      "asset": "snr",
+      "value": "$metaSNR"
+    },
+    {
+      "asset": "rssi",
+      "value": "$metaRSSI"
+    },
+    {
+      "asset": "payloadlength",
+      "value": "$metapayloadLength"
+    },
+    {
+      "asset": "gwlong",
+      "value": "$metaLongitude"
+    },
+    {
+      "asset": "gwlat",
+      "value": "$metaLatitude",
+      "type": "number"
+    },
+    {
+      "asset": "frequency",
+      "value": "$metaFrequency",
+      "type": "number"
+    },
+    {
+      "asset": "counterup",
+      "value": "$metaCounterUp",
+      "type": "number"
+    }
+  ]
+}
