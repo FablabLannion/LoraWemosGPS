@@ -72,6 +72,14 @@ static osjob_t sendjob;
 // cycle limitations).
 const unsigned TX_INTERVAL = 60;
 
+#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP 60 /* Time ESP32 will go to sleep (in seconds) */
+
+
+RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR u4_t RTC_seqnoUp = 0;
+RTC_DATA_ATTR int statCount = 0;
+
 // Pin mapping
 const lmic_pinmap lmic_pins = {
   .nss = 18,
@@ -184,9 +192,16 @@ void onEvent (ev_t ev) {
         Serial.println(s);
 		  curState.total_rcv++;
       }
-		displayStats (&curState);
+		  displayStats (&curState);
+
       // Schedule next transmission
-      os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+      // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+      // go into deep sleep for TX_interval
+      RTC_seqnoUp = LMIC.seqnoUp;
+      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+      esp_deep_sleep_start();
+      
+      
       break;
     case EV_LOST_TSYNC:
       Serial.println(F("EV_LOST_TSYNC"));
@@ -232,19 +247,12 @@ void do_send(osjob_t* j) {
       then double it (note above that Adafruit halves the voltage), then multiply that by the reference voltage of the ESP32 which
       is 3.3V and then vinally, multiply that again by the ADC Reference Voltage of 1100mV.
       */
-      Serial.println("Vbat = "); Serial.print(VBAT); Serial.println(" Volts");
-      Serial.print("Temperature: ");
+    
       temp_farenheit = temprature_sens_read();
       // Convert raw temperature in F to Celsius degrees
-      temp_celsius = ( temp_farenheit - 32 ) / 1.8;      
-      Serial.print(temp_celsius);
-      Serial.println(" C");
-     
-
-      
+      temp_celsius = ( temp_farenheit - 32 ) / 1.8;             
       hall_value = hallRead(); 
-      Serial.print("Hall sensor measurement: ");
-      Serial.println(hall_value); 
+  
 
       txBuffer[9] = highByte(round(VBAT*100));
       txBuffer[10] = lowByte(round(VBAT*100));
@@ -262,8 +270,7 @@ void do_send(osjob_t* j) {
     }
     else
     {
-		curState.gps = 0;
-		displayStats(&curState);
+		curState.gps = 0;		
       //try again in 3 seconds
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(3), do_send);
     }
@@ -271,10 +278,35 @@ void do_send(osjob_t* j) {
   // Next TX is scheduled after TX_COMPLETE event.
 }
 
+void print_wakeup_reason() {
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch (wakeup_reason)
+  {
+    case 1  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case 2  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case 3  : Serial.println("Wakeup caused by timer"); break;
+    case 4  : Serial.println("Wakeup caused by touchpad"); break;
+    case 5  : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
+  }
+}
+
 
 void setup() {
   Serial.begin(115200);
-  Serial.println(F("TTN Mapper"));
+
+
+  //Increment boot number and print it every reboot
+  ++bootCount;
+  Serial.println("Boot number: " + String(bootCount));
+  Serial.println("RTC_seqnoUp: " + String(RTC_seqnoUp));
+  Serial.println("Stationary Counter: " + String(statCount));       
+
+  //Print the wakeup reason for ESP32
+  print_wakeup_reason(); 
 
   //Turn off WiFi and Bluetooth
   WiFi.mode(WIFI_OFF);
