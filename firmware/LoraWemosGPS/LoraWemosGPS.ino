@@ -29,6 +29,8 @@
  *It seems that internal température is not available anymore :
  *https://www.esp32.com/viewtopic.php?t=5875
  * 
+ * Detailed information and link to used source code can be found here :
+ * https://wiki.fablab-lannion.org/index.php?title=WemosTTGO_GPS
  *
  *******************************************************************************/
 
@@ -79,6 +81,9 @@ const unsigned TX_INTERVAL = 60;
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR u4_t RTC_seqnoUp = 0;
 RTC_DATA_ATTR int statCount = 0;
+RTC_DATA_ATTR double prevLat = 0;
+RTC_DATA_ATTR double prevLon = 0;
+double dist = 0;
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -236,41 +241,64 @@ void do_send(osjob_t* j) {
     if (gps.checkGpsFix())
     {
 		 curState.gps = gps.tGps.satellites.value();
-      // Prepare upstream data transmission at the next possible time.
-      gps.buildPacket(txBuffer);
-      //Add some extra info like battery, temperature....
-      // Battery Voltage
-      VBAT = (float)(analogRead(vbatPin)) / 4095*2*3.3*1.1;
-      /*
-      The ADC value is a 12-bit number, so the maximum value is 4095 (counting from 0).
-      To convert the ADC integer value to a real voltage you’ll need to divide it by the maximum value of 4095,
-      then double it (note above that Adafruit halves the voltage), then multiply that by the reference voltage of the ESP32 which
-      is 3.3V and then vinally, multiply that again by the ADC Reference Voltage of 1100mV.
-      */
+     dist = TinyGPSPlus::distanceBetween(gps.tGps.location.lat(), gps.tGps.location.lng(), prevLat, prevLon);
+     if (dist > 50 || statCount > 9) {
+        Serial.println("Distance moved: " + String(dist));
+        Serial.println("Time stationary: " + String(statCount * TIME_TO_SLEEP * uS_TO_S_FACTOR));
+        if (dist <= 50) {
+          Serial.println("Sending because stationary for longer than max.");
+        }
+        statCount = 0;
+        prevLat = gps.tGps.location.lat();
+        prevLon = gps.tGps.location.lng();
+
+     
+        // Prepare upstream data transmission at the next possible time.
+        gps.buildPacket(txBuffer);
+        //Add some extra info like battery, temperature....
+        // Battery Voltage
+        VBAT = (float)(analogRead(vbatPin)) / 4095*2*3.3*1.1;
+        /*
+        The ADC value is a 12-bit number, so the maximum value is 4095 (counting from 0).
+        To convert the ADC integer value to a real voltage you’ll need to divide it by the maximum value of 4095,
+        then double it (note above that Adafruit halves the voltage), then multiply that by the reference voltage of the ESP32 which
+        is 3.3V and then vinally, multiply that again by the ADC Reference Voltage of 1100mV.
+        */
     
-      temp_farenheit = temprature_sens_read();
-      // Convert raw temperature in F to Celsius degrees
-      temp_celsius = ( temp_farenheit - 32 ) / 1.8;             
-      hall_value = hallRead(); 
+        temp_farenheit = temprature_sens_read();
+        // Convert raw temperature in F to Celsius degrees
+        temp_celsius = ( temp_farenheit - 32 ) / 1.8;             
+        hall_value = hallRead(); 
+    
   
+        txBuffer[9] = highByte(round(VBAT*100));
+        txBuffer[10] = lowByte(round(VBAT*100));
+        txBuffer[11] = highByte(round(temp_celsius*10));
+        txBuffer[12] = lowByte(round(temp_celsius*10));
+        txBuffer[13] = highByte(curState.gps);
+        txBuffer[14] = lowByte(curState.gps);
+        txBuffer[15] = highByte(hall_value);
+        txBuffer[16] = lowByte(hall_value);   
+  
+        LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
+        Serial.println(F("Packet queued"));
+        digitalWrite(BUILTIN_LED, HIGH);
+  		  displayStats(&curState);
 
-      txBuffer[9] = highByte(round(VBAT*100));
-      txBuffer[10] = lowByte(round(VBAT*100));
-      txBuffer[11] = highByte(round(temp_celsius*10));
-      txBuffer[12] = lowByte(round(temp_celsius*10));
-      txBuffer[13] = highByte(curState.gps);
-      txBuffer[14] = lowByte(curState.gps);
-      txBuffer[15] = highByte(hall_value);
-      txBuffer[16] = lowByte(hall_value);   
-
-      LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
-      Serial.println(F("Packet queued"));
-      digitalWrite(BUILTIN_LED, HIGH);
-		displayStats(&curState);
+        } 
+        else {
+        Serial.println("Not sending, stationary.");
+        Serial.println("Distance moved: " + String(dist));
+        Serial.println("Time stationary: " + String(statCount * TIME_TO_SLEEP * uS_TO_S_FACTOR));
+        ++statCount;
+        RTC_seqnoUp = LMIC.seqnoUp;
+        esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+        esp_deep_sleep_start(); 
+        }
     }
     else
     {
-		curState.gps = 0;		
+		  curState.gps = 0;		
       //try again in 3 seconds
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(3), do_send);
     }
