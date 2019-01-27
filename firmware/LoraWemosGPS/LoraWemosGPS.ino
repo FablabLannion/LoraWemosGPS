@@ -15,6 +15,7 @@ U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ OLED_SCL, /* data=*/ OLED_SDA
 
 // T-Beam specific hardware
 #define BUILTIN_LED 25
+#define GPS_LED 14
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,11 +161,20 @@ void onEvent (ev_t ev) {
       }
       displayStats (&curState);
 
+
+
+      pinMode(BUILTIN_LED, OUTPUT);
+      digitalWrite(BUILTIN_LED, LOW);
       // Schedule next transmission
       // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
       // go into deep sleep for TX_interval
       RTC_seqnoUp = LMIC.seqnoUp;
       esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+      //This 4 lines did not have influence if I remove them I get the same ->A verifier 
+      esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
+      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
       esp_deep_sleep_start();
       
       
@@ -192,6 +202,7 @@ void onEvent (ev_t ev) {
 }
 
 void do_send(osjob_t* j) {
+  
   // Check if there is not a current TX/RX job running
   if (LMIC.opmode & OP_TXRXPEND)
   {
@@ -201,6 +212,10 @@ void do_send(osjob_t* j) {
   {
     if (gps.checkGpsFix())
     {
+       //Essai pour couper la LED GPS 
+     pinMode(GPS_LED, OUTPUT);
+     digitalWrite(GPS_LED, LOW);
+     Serial.println(F("GPS LED Eteinte"));
      curState.gps = gps.tGps.satellites.value();
       // Prepare upstream data transmission at the next possible time.
       gps.buildPacket(txBuffer);
@@ -230,13 +245,15 @@ void do_send(osjob_t* j) {
       txBuffer[16] = lowByte(hall_value);   
 
       LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
-      Serial.println(F("Packet queued"));
-      digitalWrite(BUILTIN_LED, HIGH);
+      Serial.println(F("Packet queued"));      
     displayStats(&curState);
     }
     else
     {
-    curState.gps = 0;   
+     pinMode(GPS_LED, OUTPUT);
+     digitalWrite(GPS_LED, HIGH);
+     Serial.println(F("GPS LED Allumée"));
+      curState.gps = 0;   
       //try again in 3 seconds
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(3), do_send);
     }
@@ -245,6 +262,8 @@ void do_send(osjob_t* j) {
 }
 
 void print_wakeup_reason() {
+
+  digitalWrite(BUILTIN_LED, HIGH);
   esp_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -299,6 +318,17 @@ void setup() {
 
   // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
+
+/*
+  // On AVR, these values are stored in flash and only copied to RAM
+  // once. Copy them to a temporary buffer here, LMIC_setSession will
+  // copy them into a buffer of its own again.
+  uint8_t appskey[sizeof(LMIC.artKey)];
+  uint8_t nwkskey[sizeof(LMIC.nwkKey)];
+  memcpy_P(appskey, LMIC.artKey, sizeof(LMIC.artKey));
+  memcpy_P(nwkskey, LMIC.nwkKey, sizeof(LMIC.nwkKey));
+  LMIC_setSession (0x1, LMIC.devaddr, nwkskey, appskey);
+  */
   LMIC_setClockError(MAX_CLOCK_ERROR * 1 / 100);
   // Set up the channels used by the Things Network, which corresponds
   // to the defaults of most gateways. Without this, only three base
@@ -334,12 +364,9 @@ void setup() {
   LMIC_setDrTxpow(DR_SF9,14);
 
   // Start job (sending automatically starts OTAA too)
-  do_send(&sendjob);
-
+  do_send(&sendjob);  
   
-  
-  pinMode(BUILTIN_LED, OUTPUT);
-  digitalWrite(BUILTIN_LED, LOW);
+ 
 
 }
 
