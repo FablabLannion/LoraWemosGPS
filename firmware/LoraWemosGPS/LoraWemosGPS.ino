@@ -2,6 +2,7 @@
 #include <hal/hal.h>
 #include <SPI.h>
 #include <WiFi.h>
+#include "esp_sleep.h"
 #include "gps.h"
 #include "hw.h"
 #include "keys.h"
@@ -112,6 +113,7 @@ void displayStats (state_t* st) {
 }
 
 void onEvent (ev_t ev) {
+  size_t lbuf;
   switch (ev) {
     case EV_SCAN_TIMEOUT:
       displayState ("EV_SCAN_TIMEOUT");
@@ -129,10 +131,11 @@ void onEvent (ev_t ev) {
       displayState ("EV_JOINING");
       break;
     case EV_JOINED:
-      displayState ("EV_JOINED");
+      displayState ("EV_JOINED");  
+          
       // Disable link check validation (automatically enabled
       // during join, but not supported by TTN at this time).
-      LMIC_setLinkCheckMode(0);
+      //LMIC_setLinkCheckMode(0);
       break;
     case EV_RFU1:
       Serial.println(F("EV_RFU1"));
@@ -159,8 +162,7 @@ void onEvent (ev_t ev) {
         Serial.println(s);
       curState.total_rcv++;
       }
-      displayStats (&curState);
-
+      displayStats (&curState);    
 
 
       pinMode(BUILTIN_LED, OUTPUT);
