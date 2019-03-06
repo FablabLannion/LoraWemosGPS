@@ -2,7 +2,7 @@
 #include <hal/hal.h>
 #include <SPI.h>
 #include <WiFi.h>
-#include "esp_sleep.h"
+// #include "esp_sleep.h"
 #include "gps.h"
 #include "hw.h"
 #include "keys.h"
@@ -168,16 +168,16 @@ void onEvent (ev_t ev) {
       pinMode(BUILTIN_LED, OUTPUT);
       digitalWrite(BUILTIN_LED, LOW);
       // Schedule next transmission
-      // os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
+      os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
       // go into deep sleep for TX_interval
-      RTC_seqnoUp = LMIC.seqnoUp;
-      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-      //This 4 lines did not have influence if I remove them I get the same ->A verifier 
-      esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
-      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-      esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-      esp_deep_sleep_start();
+//       RTC_seqnoUp = LMIC.seqnoUp;
+//       esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+//       //This 4 lines did not have influence if I remove them I get the same ->A verifier 
+//       esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
+//       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+//       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+//       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+//       esp_deep_sleep_start();
       
       
       break;
@@ -263,23 +263,23 @@ void do_send(osjob_t* j) {
   // Next TX is scheduled after TX_COMPLETE event.
 }
 
-void print_wakeup_reason() {
-
-  digitalWrite(BUILTIN_LED, HIGH);
-  esp_sleep_wakeup_cause_t wakeup_reason;
-
-  wakeup_reason = esp_sleep_get_wakeup_cause();
-
-  switch (wakeup_reason)
-  {
-    case 1  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-    case 2  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
-    case 3  : Serial.println("Wakeup caused by timer"); break;
-    case 4  : Serial.println("Wakeup caused by touchpad"); break;
-    case 5  : Serial.println("Wakeup caused by ULP program"); break;
-    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
-  }
-}
+// void print_wakeup_reason() {
+// 
+//   digitalWrite(BUILTIN_LED, HIGH);
+//   esp_sleep_wakeup_cause_t wakeup_reason;
+// 
+//   wakeup_reason = esp_sleep_get_wakeup_cause();
+// 
+//   switch (wakeup_reason)
+//   {
+//     case 1  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+//     case 2  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+//     case 3  : Serial.println("Wakeup caused by timer"); break;
+//     case 4  : Serial.println("Wakeup caused by touchpad"); break;
+//     case 5  : Serial.println("Wakeup caused by ULP program"); break;
+//     default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
+//   }
+// }
 
 
 void setup() {
@@ -293,7 +293,7 @@ void setup() {
   Serial.println("Stationary Counter: " + String(statCount));       
 
   //Print the wakeup reason for ESP32
-  print_wakeup_reason(); 
+//   print_wakeup_reason(); 
 
   //Turn off WiFi and Bluetooth
   WiFi.mode(WIFI_OFF);
