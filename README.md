@@ -9,7 +9,7 @@ Contient du code pour les cartes TTGO T-Beam ou TTGO LoRa32 v1 lié à :
 
 bibliothèque nécessaires :
 * [TinyGPS++](https://github.com/mikalhart/TinyGPSPlus) à installer en ligne de commande
-* [MCCI LoRaWAN LMIC library](https://github.com/mcci-catena/arduino-lmic)  à installer via le gestionaire de bibliothèques
+* [MCCI LoRaWAN LMIC library](https://github.com/mcci-catena/arduino-lmic)  2.2.2 à installer via le gestionaire de bibliothèques
 
 Pour le TTGO LoRa32 v1 :
 * [U8g2](https://github.com/olikraus/u8g2) à installer via le gestionaire de bibliothèques
