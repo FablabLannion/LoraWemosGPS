@@ -30,7 +30,7 @@ const uint8_t vbatPin = 35;
 float VBAT; // battery voltage from ESP32 ADC read
 float temp_celsius;; //internal temp of esp32
 uint8_t temp_farenheit;
-int hall_value=0;
+int hall_value = 0;
 char s[32]; // used to sprintf for Serial output
 uint8_t txBuffer[17]; //buffer used to send data
 gps gps;
@@ -69,18 +69,18 @@ typedef struct state {
 state_t curState;
 
 /** display current cnx state
- * @param state string to be displayed
- */
+   @param state string to be displayed
+*/
 void displayState (const char* state) {
 #ifdef OLED
   u8x8.clearLine (2);
-  u8x8.drawString (0,2,state);
+  u8x8.drawString (0, 2, state);
 #endif
   Serial.println(state);
 }
 
 /** display number of packets send & received
- */
+*/
 void displayStats (state_t* st) {
   char l[17];
   uint8_t n = 4;
@@ -90,7 +90,7 @@ void displayStats (state_t* st) {
   l[16] = 0;
 #ifdef OLED
   u8x8.clearLine (n);
-  u8x8.drawString (0,n++, l);
+  u8x8.drawString (0, n++, l);
 #endif
   Serial.println (l);
   // RSSI & SNR
@@ -98,7 +98,7 @@ void displayStats (state_t* st) {
   l[16] = 0;
 #ifdef OLED
   u8x8.clearLine (n);
-  u8x8.drawString (0,n++, l);
+  u8x8.drawString (0, n++, l);
 #endif
   Serial.println (l);
   // gps & antenas
@@ -106,7 +106,7 @@ void displayStats (state_t* st) {
   l[16] = 0;
 #ifdef OLED
   u8x8.clearLine (n);
-  u8x8.drawString (0,n++, l);
+  u8x8.drawString (0, n++, l);
 #endif
   Serial.println (l);
 
@@ -131,8 +131,8 @@ void onEvent (ev_t ev) {
       displayState ("EV_JOINING");
       break;
     case EV_JOINED:
-      displayState ("EV_JOINED");  
-          
+      displayState ("EV_JOINED");
+
       // Disable link check validation (automatically enabled
       // during join, but not supported by TTN at this time).
       //LMIC_setLinkCheckMode(0);
@@ -149,9 +149,9 @@ void onEvent (ev_t ev) {
     case EV_TXCOMPLETE:
       displayState("EV_TXCOMPLETE");
       digitalWrite(BUILTIN_LED, LOW);
-        curState.total_snd++;
-          curState.rssi = LMIC.rssi;
-          curState.snr = LMIC.snr;
+      curState.total_snd++;
+      curState.rssi = LMIC.rssi;
+      curState.snr = LMIC.snr;
       if (LMIC.txrxFlags & TXRX_ACK) {
         Serial.println(F("Received Ack"));
       }
@@ -160,9 +160,9 @@ void onEvent (ev_t ev) {
         Serial.println(s);
         sprintf(s, "RSSI %d SNR %.1d", LMIC.rssi, LMIC.snr);
         Serial.println(s);
-      curState.total_rcv++;
+        curState.total_rcv++;
       }
-      displayStats (&curState);    
+      displayStats (&curState);
 
 
       pinMode(BUILTIN_LED, OUTPUT);
@@ -170,16 +170,16 @@ void onEvent (ev_t ev) {
       // Schedule next transmission
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
       // go into deep sleep for TX_interval
-//       RTC_seqnoUp = LMIC.seqnoUp;
-//       esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-//       //This 4 lines did not have influence if I remove them I get the same ->A verifier 
-//       esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
-//       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-//       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-//       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-//       esp_deep_sleep_start();
-      
-      
+      //       RTC_seqnoUp = LMIC.seqnoUp;
+      //       esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+      //       //This 4 lines did not have influence if I remove them I get the same ->A verifier
+      //       esp_sleep_pd_config(ESP_PD_DOMAIN_MAX, ESP_PD_OPTION_OFF);
+      //       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+      //       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+      //       esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+      //       esp_deep_sleep_start();
+
+
       break;
     case EV_LOST_TSYNC:
       Serial.println(F("EV_LOST_TSYNC"));
@@ -204,7 +204,7 @@ void onEvent (ev_t ev) {
 }
 
 void do_send(osjob_t* j) {
-  
+
   // Check if there is not a current TX/RX job running
   if (LMIC.opmode & OP_TXRXPEND)
   {
@@ -214,48 +214,50 @@ void do_send(osjob_t* j) {
   {
     if (gps.checkGpsFix())
     {
-       //Essai pour couper la LED GPS 
-     pinMode(GPS_LED, OUTPUT);
-     digitalWrite(GPS_LED, LOW);
-     Serial.println(F("GPS LED Eteinte"));
-     curState.gps = gps.tGps.satellites.value();
+      //Essai pour couper la LED GPS
+      pinMode(GPS_LED, OUTPUT);
+      digitalWrite(GPS_LED, LOW);
+      Serial.println(F("GPS LED Eteinte"));
+      u8x8.drawString(0, 3, "Fix GPS");
+      curState.gps = gps.tGps.satellites.value();
       // Prepare upstream data transmission at the next possible time.
       gps.buildPacket(txBuffer);
       //Add some extra info like battery, temperature....
       // Battery Voltage
-      VBAT = (float)(analogRead(vbatPin)) / 4095*2*3.3*1.1;
+      VBAT = (float)(analogRead(vbatPin)) / 4095 * 2 * 3.3 * 1.1;
       /*
-      The ADC value is a 12-bit number, so the maximum value is 4095 (counting from 0).
-      To convert the ADC integer value to a real voltage you’ll need to divide it by the maximum value of 4095,
-      then double it (note above that Adafruit halves the voltage), then multiply that by the reference voltage of the ESP32 which
-      is 3.3V and then vinally, multiply that again by the ADC Reference Voltage of 1100mV.
+        The ADC value is a 12-bit number, so the maximum value is 4095 (counting from 0).
+        To convert the ADC integer value to a real voltage you’ll need to divide it by the maximum value of 4095,
+        then double it (note above that Adafruit halves the voltage), then multiply that by the reference voltage of the ESP32 which
+        is 3.3V and then vinally, multiply that again by the ADC Reference Voltage of 1100mV.
       */
-    
+
       temp_farenheit = temprature_sens_read();
       // Convert raw temperature in F to Celsius degrees
-      temp_celsius = ( temp_farenheit - 32 ) / 1.8;             
-      hall_value = hallRead(); 
-  
+      temp_celsius = ( temp_farenheit - 32 ) / 1.8;
+      hall_value = hallRead();
 
-      txBuffer[9] = highByte(round(VBAT*100));
-      txBuffer[10] = lowByte(round(VBAT*100));
-      txBuffer[11] = highByte(round(temp_celsius*10));
-      txBuffer[12] = lowByte(round(temp_celsius*10));
+
+      txBuffer[9] = highByte(int(round(VBAT * 100)));
+      txBuffer[10] = lowByte(int(round(VBAT * 100)));
+      txBuffer[11] = highByte(int(round(temp_celsius * 10)));
+      txBuffer[12] = lowByte(int(round(temp_celsius * 10)));
       txBuffer[13] = highByte(curState.gps);
       txBuffer[14] = lowByte(curState.gps);
       txBuffer[15] = highByte(hall_value);
-      txBuffer[16] = lowByte(hall_value);   
+      txBuffer[16] = lowByte(hall_value);
 
       LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
-      Serial.println(F("Packet queued"));      
-    displayStats(&curState);
+      Serial.println(F("Packet queued"));
+      displayStats(&curState);
     }
     else
     {
-     pinMode(GPS_LED, OUTPUT);
-     digitalWrite(GPS_LED, HIGH);
-     Serial.println(F("GPS LED Allumée"));
-      curState.gps = 0;   
+      pinMode(GPS_LED, OUTPUT);
+      digitalWrite(GPS_LED, HIGH);
+      Serial.println(F("GPS LED Allumée"));
+      u8x8.drawString(0, 3, "No Fix GPS");
+      curState.gps = 0;
       //try again in 3 seconds
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(3), do_send);
     }
@@ -264,12 +266,12 @@ void do_send(osjob_t* j) {
 }
 
 // void print_wakeup_reason() {
-// 
+//
 //   digitalWrite(BUILTIN_LED, HIGH);
 //   esp_sleep_wakeup_cause_t wakeup_reason;
-// 
+//
 //   wakeup_reason = esp_sleep_get_wakeup_cause();
-// 
+//
 //   switch (wakeup_reason)
 //   {
 //     case 1  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
@@ -290,30 +292,30 @@ void setup() {
   ++bootCount;
   Serial.println("Boot number: " + String(bootCount));
   Serial.println("RTC_seqnoUp: " + String(RTC_seqnoUp));
-  Serial.println("Stationary Counter: " + String(statCount));       
+  Serial.println("Stationary Counter: " + String(statCount));
 
   //Print the wakeup reason for ESP32
-//   print_wakeup_reason(); 
+  //   print_wakeup_reason();
 
   //Turn off WiFi and Bluetooth
   WiFi.mode(WIFI_OFF);
   btStop();
   gps.init();
-  
-  #ifdef OLED
-    // init oled screen
-    u8x8.begin();
-    u8x8.setFont(u8x8_font_chroma48medium8_r);
-    u8x8.drawString(0, 1, "TTN MAPPER");
-  #endif
+
+#ifdef OLED
+  // init oled screen
+  u8x8.begin();
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
+  u8x8.drawString(0, 1, "TTN MAPPER");
+#endif
 
   pinMode(vbatPin, INPUT);
-  #ifdef VCC_ENABLE
+#ifdef VCC_ENABLE
   // For Pinoccio Scout boards
   pinMode(VCC_ENABLE, OUTPUT);
   digitalWrite(VCC_ENABLE, HIGH);
   delay(1000);
-  #endif
+#endif
 
   // LMIC init
   os_init();
@@ -321,15 +323,15 @@ void setup() {
   // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
 
-/*
-  // On AVR, these values are stored in flash and only copied to RAM
-  // once. Copy them to a temporary buffer here, LMIC_setSession will
-  // copy them into a buffer of its own again.
-  uint8_t appskey[sizeof(LMIC.artKey)];
-  uint8_t nwkskey[sizeof(LMIC.nwkKey)];
-  memcpy_P(appskey, LMIC.artKey, sizeof(LMIC.artKey));
-  memcpy_P(nwkskey, LMIC.nwkKey, sizeof(LMIC.nwkKey));
-  LMIC_setSession (0x1, LMIC.devaddr, nwkskey, appskey);
+  /*
+    // On AVR, these values are stored in flash and only copied to RAM
+    // once. Copy them to a temporary buffer here, LMIC_setSession will
+    // copy them into a buffer of its own again.
+    uint8_t appskey[sizeof(LMIC.artKey)];
+    uint8_t nwkskey[sizeof(LMIC.nwkKey)];
+    memcpy_P(appskey, LMIC.artKey, sizeof(LMIC.artKey));
+    memcpy_P(nwkskey, LMIC.nwkKey, sizeof(LMIC.nwkKey));
+    LMIC_setSession (0x1, LMIC.devaddr, nwkskey, appskey);
   */
   LMIC_setClockError(MAX_CLOCK_ERROR * 1 / 100);
   // Set up the channels used by the Things Network, which corresponds
@@ -363,15 +365,16 @@ void setup() {
 
   // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
   //LMIC_setDrTxpow(DR_SF11,14);
-  LMIC_setDrTxpow(DR_SF9,14);
+  LMIC_setDrTxpow(DR_SF9, 14);
 
+//LMIC_setTxData2(1, txBuffer, sizeof(txBuffer), 0);
   // Start job (sending automatically starts OTAA too)
-  do_send(&sendjob);  
-  
- 
+  do_send(&sendjob);
+
+
 
 }
 
 void loop() {
-    os_runloop_once();
+  os_runloop_once();
 }
